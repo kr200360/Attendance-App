@@ -25,7 +25,8 @@ export async function connectDatabase(): Promise<typeof mongoose> {
     if (config.nodeEnv !== 'production') {
       console.log('Spinning up in-memory MongoDB server for development/testing...');
       try {
-        process.env.MONGOMS_DOWNLOAD_DIR = path.resolve(process.cwd(), '.mongo-bin');
+        const monorepoRoot = path.resolve(__dirname, '../../../../');
+        process.env.MONGOMS_DOWNLOAD_DIR = path.resolve(monorepoRoot, '.mongo-bin');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         memoryServer = await MongoMemoryServer.create();
         const memUri = memoryServer.getUri();

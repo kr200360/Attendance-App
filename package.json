@@ -2,6 +2,11 @@
   "name": "school-attendance-system",
   "version": "1.0.0",
   "private": true,
+  "config": {
+    "mongodbMemoryServer": {
+      "version": "6.0.14"
+    }
+  },
   "description": "Enterprise-grade School Attendance Management System",
   "workspaces": [
     "packages/*",

@@ -9,6 +9,14 @@ export default defineConfig({
       'lucide-react': path.resolve(__dirname, 'src/components/Icons.tsx')
     }
   },
+  esbuild: {
+    target: 'esnext'
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
   build: {
     target: 'esnext'
   },

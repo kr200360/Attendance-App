@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "main": "dist/index.js",
+  "config": {
+    "mongodbMemoryServer": {
+      "version": "6.0.14"
+    }
+  },
   "scripts": {
     "dev": "node ../../node_modules/tsx/dist/cli.mjs watch src/index.ts",
     "build": "node ../../node_modules/typescript/bin/tsc",
