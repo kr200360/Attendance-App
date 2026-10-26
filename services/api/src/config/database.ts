@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { config } from './env';
+import path from 'path';
 
 let memoryServer: any = null;
 
@@ -10,11 +11,10 @@ export async function connectDatabase(): Promise<typeof mongoose> {
     return mongoose;
   }
 
-  // If explicitly specified in test or dev fallback
   try {
     console.log(`Connecting to MongoDB at: ${config.mongodbUri.replace(/:[^:@]+@/, ':****@')}`);
     await mongoose.connect(config.mongodbUri, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: 2000,
     });
     console.log('MongoDB connected successfully');
     return mongoose;
@@ -25,6 +25,7 @@ export async function connectDatabase(): Promise<typeof mongoose> {
     if (config.nodeEnv !== 'production') {
       console.log('Spinning up in-memory MongoDB server for development/testing...');
       try {
+        process.env.MONGOMS_DOWNLOAD_DIR = path.resolve(process.cwd(), '.mongo-bin');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         memoryServer = await MongoMemoryServer.create();
         const memUri = memoryServer.getUri();

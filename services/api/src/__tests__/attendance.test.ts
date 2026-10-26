@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert';
 import request from 'supertest';
 import app from '../app';
 import { connectDatabase, disconnectDatabase } from '../config/database';
@@ -28,7 +29,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
   let student2Id: string;
   let sessionId: string;
 
-  beforeAll(async () => {
+  before(async () => {
     await connectDatabase();
 
     // Clean tables
@@ -73,7 +74,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
     parentToken = parentLogin.body.data.accessToken;
   });
 
-  afterAll(async () => {
+  after(async () => {
     await disconnectDatabase();
   });
 
@@ -83,7 +84,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .post('/api/v1/academic-years')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: '2026-2027', startDate: '2026-09-01', endDate: '2027-06-30' });
-    expect(yearRes.status).toBe(201);
+    assert.strictEqual(yearRes.status, 201);
     academicYearId = yearRes.body.data._id;
 
     // Create Class
@@ -91,7 +92,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .post('/api/v1/classes')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ grade: 'Grade 10', section: 'A', academicYearId });
-    expect(classRes.status).toBe(201);
+    assert.strictEqual(classRes.status, 201);
     classId = classRes.body.data._id;
 
     // Create Student 1 & 2
@@ -99,14 +100,14 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .post('/api/v1/students')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ admissionNumber: 'E2E-001', name: 'Alice Watson', classId });
-    expect(s1Res.status).toBe(201);
+    assert.strictEqual(s1Res.status, 201);
     student1Id = s1Res.body.data._id;
 
     const s2Res = await request(app)
       .post('/api/v1/students')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ admissionNumber: 'E2E-002', name: 'Bob Dylan', classId });
-    expect(s2Res.status).toBe(201);
+    assert.strictEqual(s2Res.status, 201);
     student2Id = s2Res.body.data._id;
 
     // Link Parent to Alice Watson
@@ -114,7 +115,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .post(`/api/v1/students/${student1Id}/parent-links`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ parentUserId, relationship: 'father', verificationStatus: 'verified' });
-    expect(linkRes.status).toBe(201);
+    assert.strictEqual(linkRes.status, 201);
   });
 
   it('Step 2: Admin assigns teacher to class', async () => {
@@ -127,7 +128,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
         classId,
         academicYearId
       });
-    expect(assignRes.status).toBe(201);
+    assert.strictEqual(assignRes.status, 201);
   });
 
   it('Step 3: Unauthorized teacher is blocked from accessing the class roster', async () => {
@@ -135,7 +136,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .get(`/api/v1/classes/${classId}/roster`)
       .set('Authorization', `Bearer ${unauthorizedTeacherToken}`);
 
-    expect(res.status).toBe(403);
+    assert.strictEqual(res.status, 403);
   });
 
   it('Step 4: Assigned teacher fetches class roster successfully', async () => {
@@ -143,8 +144,8 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .get(`/api/v1/classes/${classId}/roster`)
       .set('Authorization', `Bearer ${teacherToken}`);
 
-    expect(res.status).toBe(200);
-    expect(res.body.data.students.length).toBe(2);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.data.students.length, 2);
   });
 
   it('Step 5: Teacher creates attendance session and marks attendance', async () => {
@@ -153,9 +154,9 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .set('Authorization', `Bearer ${teacherToken}`)
       .send({ classId, date: '2026-10-26', period: 1 });
 
-    expect(sessionRes.status).toBe(200);
+    assert.strictEqual(sessionRes.status, 200);
     sessionId = sessionRes.body.data.session._id;
-    expect(sessionId).toBeDefined();
+    assert.ok(sessionId);
 
     // Save Draft records (Alice present, Bob absent)
     const draftRes = await request(app)
@@ -168,7 +169,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
         ]
       });
 
-    expect(draftRes.status).toBe(200);
+    assert.strictEqual(draftRes.status, 200);
   });
 
   it('Step 6: Teacher submits attendance; triggers absence notification', async () => {
@@ -182,8 +183,8 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
         ]
       });
 
-    expect(submitRes.status).toBe(200);
-    expect(submitRes.body.data.session.status).toBe('submitted');
+    assert.strictEqual(submitRes.status, 200);
+    assert.strictEqual(submitRes.body.data.session.status, 'submitted');
 
     // Duplicate submission should be rejected
     const retryRes = await request(app)
@@ -191,7 +192,7 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .set('Authorization', `Bearer ${teacherToken}`)
       .send({ records: [{ studentId: student1Id, status: 'present' }] });
 
-    expect(retryRes.status).toBe(409);
+    assert.strictEqual(retryRes.status, 409);
   });
 
   it('Step 7: Parent can view only their verified child attendance', async () => {
@@ -200,16 +201,16 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .get(`/api/v1/attendance/students/${student1Id}/attendance`)
       .set('Authorization', `Bearer ${parentToken}`);
 
-    expect(aliceAtt.status).toBe(200);
-    expect(aliceAtt.body.data.records.length).toBe(1);
-    expect(aliceAtt.body.data.records[0].status).toBe('present');
+    assert.strictEqual(aliceAtt.status, 200);
+    assert.strictEqual(aliceAtt.body.data.records.length, 1);
+    assert.strictEqual(aliceAtt.body.data.records[0].status, 'present');
 
     // Parent attempts to view Bob Dylan's attendance (must be FORBIDDEN 403)
     const bobAtt = await request(app)
       .get(`/api/v1/attendance/students/${student2Id}/attendance`)
       .set('Authorization', `Bearer ${parentToken}`);
 
-    expect(bobAtt.status).toBe(403);
+    assert.strictEqual(bobAtt.status, 403);
   });
 
   it('Step 8: Teacher submits authorized correction and audit log is recorded', async () => {
@@ -223,17 +224,17 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
         ]
       });
 
-    expect(correctionRes.status).toBe(200);
-    expect(correctionRes.body.data.session.status).toBe('corrected');
+    assert.strictEqual(correctionRes.status, 200);
+    assert.strictEqual(correctionRes.body.data.session.status, 'corrected');
 
     // Check audit log
     const auditRes = await request(app)
       .get('/api/v1/admin/audit-logs')
       .set('Authorization', `Bearer ${adminToken}`);
 
-    expect(auditRes.status).toBe(200);
+    assert.strictEqual(auditRes.status, 200);
     const hasCorrectionLog = auditRes.body.data.some((l: any) => l.action === 'ATTENDANCE_CORRECTED');
-    expect(hasCorrectionLog).toBe(true);
+    assert.strictEqual(hasCorrectionLog, true);
   });
 
   it('Step 9: Reports calculate attendance and CSV exports properly', async () => {
@@ -241,14 +242,14 @@ describe('End-to-End Attendance & RBAC Lifecycle', () => {
       .get('/api/v1/reports/attendance/daily?date=2026-10-26')
       .set('Authorization', `Bearer ${adminToken}`);
 
-    expect(reportRes.status).toBe(200);
-    expect(reportRes.body.data.classBreakdown.length).toBe(1);
+    assert.strictEqual(reportRes.status, 200);
+    assert.strictEqual(reportRes.body.data.classBreakdown.length, 1);
 
     const exportRes = await request(app)
       .get('/api/v1/reports/attendance/export?date=2026-10-26')
       .set('Authorization', `Bearer ${adminToken}`);
 
-    expect(exportRes.status).toBe(200);
-    expect(exportRes.text).toContain('Grade 10 - A');
+    assert.strictEqual(exportRes.status, 200);
+    assert.ok(exportRes.text.includes('Grade 10 - A'));
   });
 });

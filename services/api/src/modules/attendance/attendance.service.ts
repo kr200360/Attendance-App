@@ -8,7 +8,7 @@ import { SchoolSettings } from '../settings/school-settings.model';
 import { NotificationService } from '../notifications/notification.service';
 import { AuditService } from '../audit/audit.service';
 import { NotFoundError, BadRequestError, ForbiddenError, ConflictError } from '../../shared/errors';
-import { AttendanceStatus, AttendanceRecordInput } from '@school/shared-types';
+import { AttendanceStatus, IAttendanceRecordInput } from '@school/shared-types';
 import mongoose from 'mongoose';
 
 export class AttendanceService {
@@ -155,7 +155,7 @@ export class AttendanceService {
    */
   public static async saveDraftRecords(
     sessionId: string,
-    records: AttendanceRecordInput[],
+    records: IAttendanceRecordInput[],
     userId: string
   ) {
     const session = await AttendanceSession.findById(sessionId);
@@ -170,12 +170,12 @@ export class AttendanceService {
     // Upsert each record
     const ops = records.map(r => ({
       updateOne: {
-        filter: { sessionId: session._id, studentId: r.studentId },
+        filter: { sessionId: session._id, studentId: new mongoose.Types.ObjectId(r.studentId) },
         update: {
           $set: {
             status: r.status,
             remarks: r.remarks,
-            updatedBy: userId,
+            updatedBy: new mongoose.Types.ObjectId(userId),
             markedAt: new Date()
           }
         },
@@ -184,7 +184,7 @@ export class AttendanceService {
     }));
 
     if (ops.length > 0) {
-      await AttendanceRecord.bulkWrite(ops);
+      await AttendanceRecord.bulkWrite(ops as any);
     }
 
     session.updatedAt = new Date();
@@ -198,7 +198,7 @@ export class AttendanceService {
    */
   public static async submitAttendance(
     sessionId: string,
-    records: AttendanceRecordInput[],
+    records: IAttendanceRecordInput[],
     userId: string
   ) {
     const session = await AttendanceSession.findById(sessionId);
@@ -243,7 +243,7 @@ export class AttendanceService {
    */
   public static async submitCorrectionRequest(
     sessionId: string,
-    input: { reason: string; records: AttendanceRecordInput[] },
+    input: { reason: string; records: IAttendanceRecordInput[] },
     userId: string
   ) {
     const session = await AttendanceSession.findById(sessionId);
@@ -267,12 +267,12 @@ export class AttendanceService {
 
     const ops = input.records.map(r => ({
       updateOne: {
-        filter: { sessionId: session._id, studentId: r.studentId },
+        filter: { sessionId: session._id, studentId: new mongoose.Types.ObjectId(r.studentId) },
         update: {
           $set: {
             status: r.status,
             remarks: r.remarks ? `[Corrected] ${r.remarks}` : `[Corrected: ${input.reason}]`,
-            updatedBy: userId,
+            updatedBy: new mongoose.Types.ObjectId(userId),
             markedAt: new Date()
           }
         }
@@ -280,7 +280,7 @@ export class AttendanceService {
     }));
 
     if (ops.length > 0) {
-      await AttendanceRecord.bulkWrite(ops);
+      await AttendanceRecord.bulkWrite(ops as any);
     }
 
     session.status = 'corrected';
@@ -309,9 +309,6 @@ export class AttendanceService {
       if (!isLinked) {
         throw new ForbiddenError('You can only view attendance for your verified children');
       }
-    } else if (currentUser.role === 'student') {
-      // Look up student by admission or user link
-      // For now verify studentId
     }
 
     const records = await AttendanceRecord.find({ studentId })

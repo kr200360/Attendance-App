@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert';
 import request from 'supertest';
 import app from '../app';
 import { connectDatabase, disconnectDatabase } from '../config/database';
@@ -6,7 +7,7 @@ import { User } from '../modules/users/user.model';
 import bcrypt from 'bcryptjs';
 
 describe('Auth & Role Permissions Integration', () => {
-  beforeAll(async () => {
+  before(async () => {
     await connectDatabase();
     await User.deleteMany({});
 
@@ -21,7 +22,7 @@ describe('Auth & Role Permissions Integration', () => {
     ]);
   });
 
-  afterAll(async () => {
+  after(async () => {
     await disconnectDatabase();
   });
 
@@ -30,12 +31,12 @@ describe('Auth & Role Permissions Integration', () => {
       .post('/api/v1/auth/login')
       .send({ email: 'admin@test.com', password: 'Secret123!' });
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.accessToken).toBeDefined();
-    expect(res.body.data.refreshToken).toBeDefined();
-    expect(res.body.data.user.email).toBe('admin@test.com');
-    expect(res.body.data.user.role).toBe('admin');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.data.accessToken);
+    assert.ok(res.body.data.refreshToken);
+    assert.strictEqual(res.body.data.user.email, 'admin@test.com');
+    assert.strictEqual(res.body.data.user.role, 'admin');
   });
 
   it('should reject login with wrong password', async () => {
@@ -43,8 +44,8 @@ describe('Auth & Role Permissions Integration', () => {
       .post('/api/v1/auth/login')
       .send({ email: 'admin@test.com', password: 'WrongPassword' });
 
-    expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
   });
 
   it('should reject login for deactivated user accounts', async () => {
@@ -52,8 +53,8 @@ describe('Auth & Role Permissions Integration', () => {
       .post('/api/v1/auth/login')
       .send({ email: 'inactive@test.com', password: 'Secret123!' });
 
-    expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
   });
 
   it('should refresh access token using valid refresh token', async () => {
@@ -67,8 +68,8 @@ describe('Auth & Role Permissions Integration', () => {
       .post('/api/v1/auth/refresh')
       .send({ refreshToken });
 
-    expect(refreshRes.status).toBe(200);
-    expect(refreshRes.body.data.accessToken).toBeDefined();
+    assert.strictEqual(refreshRes.status, 200);
+    assert.ok(refreshRes.body.data.accessToken);
   });
 
   it('should block unauthorized access to protected admin settings', async () => {
@@ -82,7 +83,7 @@ describe('Auth & Role Permissions Integration', () => {
       .get('/api/v1/admin/settings')
       .set('Authorization', `Bearer ${teacherToken}`);
 
-    expect(res.status).toBe(403);
-    expect(res.body.success).toBe(false);
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(res.body.success, false);
   });
 });

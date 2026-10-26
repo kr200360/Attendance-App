@@ -13,7 +13,7 @@ export class StudentService {
     status?: string;
     page?: number;
     limit?: number;
-  }) {
+  }): Promise<any> {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.max(1, Number(query.limit) || 20);
     const skip = (page - 1) * limit;
@@ -73,7 +73,7 @@ export class StudentService {
     };
   }
 
-  public static async getStudentById(id: string) {
+  public static async getStudentById(id: string): Promise<any> {
     const student = await Student.findById(id).lean();
     if (!student) {
       throw new NotFoundError('Student not found');
