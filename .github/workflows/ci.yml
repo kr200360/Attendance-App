@@ -1,0 +1,41 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: |
+          npm run build --workspace=@school/shared-types
+          npm run build --workspace=@school/validation
+
+      - name: Run Backend Tests
+        run: npm run test --workspace=@school/api
+        env:
+          JWT_ACCESS_SECRET: test-jwt-secret-key-123456789
+          JWT_REFRESH_SECRET: test-jwt-refresh-key-123456789
+
+      - name: Build Web Application
+        run: npm run build --workspace=@school/web

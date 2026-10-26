@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "EduTrack Mobile",
+    "slug": "edutrack-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "edutrack",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#1e40af"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.edutrack.attendance"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1e40af"
+      },
+      "package": "com.edutrack.attendance"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
